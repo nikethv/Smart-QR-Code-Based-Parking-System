@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Parking Slot - Smart Parking System</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="main-container">
+        <!-- Back Link -->
+        <a href="/" class="back-link">
+            ← Back to Parking Blocks
+        </a>
+
+        <div class="card">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-logo">🅿️</div>
+                <h1 class="page-title">Book Parking Slot</h1>
+                <p class="page-subtitle">Secure your spot in seconds</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" id="step-1">1</div>
+                <div class="step" id="step-2">2</div>
+                <div class="step" id="step-3">3</div>
+            </div>
+
+            <!-- Slot Information -->
+            <div class="form-section">
+                <h3>📍 Selected Slot</h3>
+                <div class="info-message">
+                    <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">
+                        {{ preselected_block|title }} Block - Slot {{ preselected_slot }}
+                    </div>
+                    <div style="opacity: 0.9;">
+                        ✅ Available for booking
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phone Verification Form -->
+            <div id="phone-section" class="form-section">
+                <h3>📱 Contact Information</h3>
+                <form id="phone-form">
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+91XXXXXXXXXX" required>
+                        <small style="color: var(--text-secondary); font-size: 0.9rem;">We'll send an OTP to verify your booking</small>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="send-otp-btn">
+                        📨 Send OTP
+                    </button>
+                </form>
+                <div class="error-message" id="phone-error"></div>
+            </div>
+
+            <!-- OTP Verification Section -->
+            <div class="otp-section" id="otp-section">
+                <h3 style="text-align: center; color: var(--text-primary); margin-bottom: 1rem;">🔐 Enter Verification Code</h3>
+                <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    We've sent a 6-digit code to your phone number
+                </p>
+                <div class="form-group">
+                    <input type="text" id="otp-input" class="otp-input" placeholder="000000" maxlength="6" required>
+                </div>
+                <button type="button" class="btn btn-secondary" id="verify-otp-btn">
+                    ✓ Verify & Book Slot
+                </button>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="#" id="resend-otp" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">
+                        Didn't receive code? Resend OTP
+                    </a>
+                </div>
+                <div class="error-message" id="otp-error"></div>
+            </div>
+
+            <!-- Success Section -->
+            <div class="success-message" id="success-section">
+                <h2 style="margin-bottom: 1rem;">🎉 Booking Confirmed!</h2>
+                <div id="booking-details"></div>
+                <div class="qr-display" id="qr-display"></div>
+                <div style="margin-top: 1.5rem;">
+                    <a href="/" class="btn btn-accent" style="text-decoration: none; display: inline-block;">
+                        Book Another Slot
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/device-fingerprint.js"></script>
+    <script src="/static/pwa.js"></script>
+    <script>
+        let deviceFingerprint = null;
+        let currentBlock = "{{ preselected_block }}";
+        let currentSlot = "{{ preselected_slot }}";
+
+        // Generate device fingerprint
+        async function generateDeviceFingerprint() {
+            if (typeof getDeviceFingerprint === 'function') {
+                deviceFingerprint = await getDeviceFingerprint();
+            } else {
+                deviceFingerprint = {
+                    userAgent: navigator.userAgent,
+                    screen: `${screen.width}x${screen.height}`,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    language: navigator.language,
+                    timestamp: Date.now()
+                };
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            await generateDeviceFingerprint();
+        });
+
+        // Phone form submission
+        document.getElementById('phone-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const phoneNumber = document.getElementById('phone').value.trim();
+            if (!phoneNumber) {
+                showError('phone-error', 'Please enter your phone number');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                updateStep(1);
+                
+                const response = await fetch(`/enhanced_send_otp/${currentBlock}/${currentSlot}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: phoneNumber,
+                        device_info: deviceFingerprint
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('phone-section').style.display = 'none';
+                    document.getElementById('otp-section').style.display = 'block';
+                    updateStep(2);
+                } else {
+                    showError('phone-error', data.message);
+                }
+            } catch (error) {
+                showError('phone-error', 'Failed to send OTP. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // OTP verification
+        document.getElementById('verify-otp-btn').addEventListener('click', async function() {
+            const otp = document.getElementById('otp-input').value.trim();
+            
+            if (!otp || otp.length !== 6) {
+                showError('otp-error', 'Please enter a valid 6-digit OTP');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                
+                const response = await fetch('/enhanced_verify_otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        block: currentBlock,
+                        slot: currentSlot,
+                        otp: otp
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('otp-section').style.display = 'none';
+                    showSuccessMessage(data);
+                    updateStep(3);
+                } else {
+                    showError('otp-error', data.message);
+                }
+            } catch (error) {
+                showError('otp-error', 'OTP verification failed. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('resend-otp').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('phone-form').dispatchEvent(new Event('submit'));
+        });
+
+        function showSuccessMessage(data) {
+            const qrSection = data.qr_code ? `
+                <div class="qr-display">
+                    <img src="data:image/png;base64,${data.qr_code}" alt="Release QR Code">
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">Scan this QR code to release your slot</p>
+                </div>
+            ` : '';
+
+            document.getElementById('booking-details').innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; margin: 1rem 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Block:</span>
+                        <strong>${currentBlock.toUpperCase()}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Slot:</span>
+                        <strong>#${currentSlot}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Status:</span>
+                        <strong style="color: var(--success-color);">Confirmed</strong>
+                    </div>
+                </div>
+                ${qrSection}
+            `;
+            document.getElementById('success-section').style.display = 'block';
+        }
+
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function setLoading(isLoading) {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = isLoading ? 'flex' : 'none';
+            
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.disabled = isLoading;
+            });
+        }
+
+        function updateStep(activeStep) {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < activeStep) {
+                    step.classList.add('completed');
+                } else if (index + 1 === activeStep) {
+                    step.classList.add('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
