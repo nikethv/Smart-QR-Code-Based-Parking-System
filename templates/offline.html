@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Smart Parking System</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .offline-container {
+            text-align: center;
+            padding: 40px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .offline-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .offline-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .offline-message {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .offline-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .retry-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .retry-button:hover {
+            background: #0056b3;
+        }
+        
+        .offline-features {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .offline-features h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .offline-features ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .offline-features li {
+            margin-bottom: 8px;
+            color: #666;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+        
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📱</div>
+        
+        <h1 class="offline-title">You're Offline</h1>
+        
+        <p class="offline-message">
+            It looks like you're not connected to the internet. 
+            Don't worry - you can still view your cached parking information!
+        </p>
+        
+        <div class="offline-actions">
+            <button class="retry-button" onclick="retryConnection()">
+                🔄 Try Again
+            </button>
+            
+            <div id="connection-status" class="status-indicator status-offline">
+                🔴 No Internet Connection
+            </div>
+        </div>
+        
+        <div class="offline-features">
+            <h3>📋 Available Offline Features:</h3>
+            <ul>
+                <li>✅ View previously loaded parking slots</li>
+                <li>✅ Access cached QR codes for booked slots</li>
+                <li>✅ View your booking history</li>
+                <li>📱 Queue actions for when you're back online</li>
+                <li>🔄 Automatic sync when connection is restored</li>
+            </ul>
+            
+            <h3>⚠️ Limited Offline Features:</h3>
+            <ul>
+                <li>❌ Book new parking slots (queued for sync)</li>
+                <li>❌ Send OTP for verification (queued for sync)</li>
+                <li>❌ Real-time slot availability updates</li>
+                <li>❌ Release slots (queued for sync)</li>
+            </ul>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #1976d2;">💡 Tip:</h3>
+            <p style="margin-bottom: 0; color: #1976d2;">
+                Actions you take while offline will be automatically synced when your connection is restored.
+                Look for the online status indicator to know when you're connected again.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connection-status');
+            
+            if (navigator.onLine) {
+                statusElement.className = 'status-indicator status-online';
+                statusElement.innerHTML = '🟢 Back Online!';
+                
+                // Auto-redirect to home after a short delay
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                statusElement.className = 'status-indicator status-offline';
+                statusElement.innerHTML = '🔴 No Internet Connection';
+            }
+        }
+        
+        function retryConnection() {
+            // Check if we're back online
+            updateConnectionStatus();
+            
+            if (navigator.onLine) {
+                // Try to navigate back to the home page
+                window.location.href = '/';
+            } else {
+                // Show a message that we're still offline
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '❌ Still Offline';
+                button.disabled = true;
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+            }
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Periodically check connection status
+        setInterval(updateConnectionStatus, 5000);
+    </script>
+</body>
+</html>
