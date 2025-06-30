@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Hospital Staff Priority Parking System">
+  <meta name="theme-color" content="#10B981">
+  
+  <title>Hospital Priority Parking</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/static/manifest.json">
+  
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Hospital Priority Parking">
+  
+  <!-- Microsoft Tiles -->
+  <meta name="msapplication-TileImage" content="/static/icons/icon-192x192.svg">
+  <meta name="msapplication-TileColor" content="#10B981">
+  
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="main-container">
+    <div class="card">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-logo">🏥</div>
+        <h1 class="page-title">Hospital Priority Parking</h1>
+        <p class="page-subtitle">Dedicated priority booking for medical professionals</p>
+      </div>
+
+      <!-- Back to Home -->
+      <div style="margin-bottom: 2rem;">
+        <a href="/" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+          ← Back to Home
+        </a>
+      </div>
+
+      <!-- Step Indicators -->
+      <div class="step-indicators">
+        <div class="step active" id="step1">
+          <div class="step-number">1</div>
+          <div class="step-label">Staff Verification</div>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-number">2</div>
+          <div class="step-label">Priority Booking</div>
+        </div>
+        <div class="step" id="step3">
+          <div class="step-number">3</div>
+          <div class="step-label">Confirmation</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Staff Verification -->
+      <div id="verification-step" class="form-section">
+        <div class="priority-info">
+          <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">🎯 Priority Access Information</h3>
+          <div style="background: linear-gradient(135deg, #10B981, #34D399); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div>
+                <h4 style="margin: 0 0 0.5rem 0; color: white;">Medical Priority</h4>
+                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">Doctors, Nurses, Emergency Staff</p>
+              </div>
+              <div>
+                <h4 style="margin: 0 0 0.5rem 0; color: white;">Dental Priority</h4>
+                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">Dental Surgeons, Assistants</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form id="staff-verification-form">
+          <div class="form-group">
+            <label for="staff-id">Hospital Staff ID</label>
+            <input type="text" id="staff-id" name="staff_id" placeholder="Enter your staff ID (e.g., DOC001)" required 
+                   style="text-transform: uppercase;" maxlength="10">
+            <small style="color: var(--text-light); font-size: 0.875rem;">
+              Enter your hospital-issued staff identification number
+            </small>
+          </div>
+          
+          <button type="submit" class="btn btn-secondary btn-lg" id="verify-btn">
+            <span id="verify-text">Verify Staff ID</span>
+            <div id="verify-loading" class="loading-spinner" style="display: none;"></div>
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: Priority Booking (Hidden initially) -->
+      <div id="booking-step" class="form-section" style="display: none;">
+        <div id="staff-info" class="staff-info-card">
+          <!-- Staff information will be populated here -->
+        </div>
+
+        <div class="priority-slots-section">
+          <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">🚗 Available Priority Slots</h3>
+          
+          <!-- Medical Priority Slots -->
+          <div class="priority-zone" id="medical-zone" style="display: none;">
+            <h4 style="color: #DC2626; margin-bottom: 1rem;">🏥 Medical Priority Slots</h4>
+            <div class="slot-grid" id="medical-slots">
+              <!-- Medical slots will be populated here -->
+            </div>
+          </div>
+
+          <!-- Dental Priority Slots -->
+          <div class="priority-zone" id="dental-zone" style="display: none;">
+            <h4 style="color: #7C3AED; margin-bottom: 1rem;">🦷 Dental Priority Slots</h4>
+            <div class="slot-grid" id="dental-slots">
+              <!-- Dental slots will be populated here -->
+            </div>
+          </div>
+
+          <!-- No Priority Slots Available -->
+          <div id="no-priority-slots" style="display: none;">
+            <div style="background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 12px; padding: 1.5rem; text-align: center;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+              <h4 style="color: #92400E; margin-bottom: 0.5rem;">No Priority Slots Available</h4>
+              <p style="color: #92400E; margin: 0;">All priority slots are currently occupied. Please check back later or use the regular booking system.</p>
+              <a href="/" class="btn btn-warning" style="margin-top: 1rem; text-decoration: none;">Use Regular Booking</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone Input (Hidden initially) -->
+        <div id="phone-input-section" class="form-section" style="display: none;">
+          <form id="priority-booking-form">
+            <div class="form-group">
+              <label for="phone-number">Phone Number</label>
+              <input type="tel" id="phone-number" name="phone_number" placeholder="Enter your phone number" required 
+                     pattern="[0-9]{10}" maxlength="10">
+              <small style="color: var(--text-light); font-size: 0.875rem;">
+                Enter 10-digit phone number for OTP verification
+              </small>
+            </div>
+            
+            <input type="hidden" id="selected-block" name="block">
+            <input type="hidden" id="selected-slot" name="slot">
+            <input type="hidden" id="verified-staff-id" name="staff_id">
+            
+            <button type="submit" class="btn btn-secondary btn-lg" id="book-btn">
+              <span id="book-text">Confirm Priority Booking</span>
+              <div id="book-loading" class="loading-spinner" style="display: none;"></div>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirmation (Hidden initially) -->
+      <div id="confirmation-step" class="form-section" style="display: none;">
+        <div id="booking-success" class="success-message">
+          <!-- Success message will be populated here -->
+        </div>
+      </div>
+
+      <!-- Error Messages -->
+      <div id="error-message" class="error-message" style="display: none;">
+        <div class="error-content">
+          <span id="error-text"></span>
+          <button onclick="closeError()" class="error-close">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Fingerprinting & PWA Scripts -->
+  <script src="/static/device-fingerprint.js"></script>
+  <script src="/static/pwa.js"></script>
+
+  <script>
+    let staffInfo = null;
+    let prioritySlots = null;
+    let selectedSlot = null;
+
+    // Step 1: Staff Verification
+    document.getElementById('staff-verification-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const staffId = document.getElementById('staff-id').value.trim().toUpperCase();
+      const verifyBtn = document.getElementById('verify-btn');
+      const verifyText = document.getElementById('verify-text');
+      const verifyLoading = document.getElementById('verify-loading');
+      
+      if (!staffId) {
+        showError('Please enter your staff ID');
+        return;
+      }
+
+      // Show loading state
+      verifyBtn.disabled = true;
+      verifyText.style.display = 'none';
+      verifyLoading.style.display = 'inline-block';      try {
+        const response = await fetch('/hospital/verify_staff', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ staff_id: staffId })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          staffInfo = data.staff_info;
+          prioritySlots = data.available_priority_slots;
+          
+          // Validate staff info
+          if (!staffInfo) {
+            showError('Invalid staff information received');
+            return;
+          }
+          
+          // Update step indicators
+          updateStepIndicator(2);
+          
+          // Hide verification step and show booking step
+          document.getElementById('verification-step').style.display = 'none';
+          document.getElementById('booking-step').style.display = 'block';
+          
+          // Populate staff info
+          populateStaffInfo(staffInfo, data.priority_level);
+          
+          // Populate available slots
+          populatePrioritySlots(prioritySlots);
+          
+        } else {
+          showError(data.message || 'Verification failed');
+        }
+      } catch (error) {
+        console.error('Verification error:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          showError('Network connection failed. Please check your internet connection and try again.');
+        } else if (error.message.includes('HTTP error')) {
+          showError('Server error. Please try again later.');
+        } else {
+          showError('Verification failed. Please check your connection and try again.');
+        }
+      } finally {
+        // Reset button state
+        verifyBtn.disabled = false;
+        verifyText.style.display = 'inline';
+        verifyLoading.style.display = 'none';
+      }
+    });    // Populate staff information
+    function populateStaffInfo(staff, priorityLevel) {
+      const staffInfoDiv = document.getElementById('staff-info');
+      
+      // Validate staff data
+      if (!staff) {
+        showError('Staff information not available');
+        return;
+      }
+      
+      const staffName = staff.name || 'Unknown';
+      const staffDepartment = staff.department || 'Unknown Department';
+      const staffId = staff.staff_id || 'Unknown';
+      const staffRole = staff.role || staff.name || 'Unknown Role';
+      const priority = priorityLevel || staff.priority || 'Unknown';
+      
+      staffInfoDiv.innerHTML = `
+        <div style="background: linear-gradient(135deg, #10B981, #34D399); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 3rem;">👨‍⚕️</div>
+            <div>
+              <h3 style="margin: 0; color: white;">${staffName}</h3>
+              <p style="margin: 0; opacity: 0.9;">${staffDepartment}</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div>
+              <div style="font-size: 0.875rem; opacity: 0.8;">Staff ID</div>
+              <div style="font-weight: 600;">${staffId}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.875rem; opacity: 0.8;">Priority Level</div>
+              <div style="font-weight: 600;">${priority}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.875rem; opacity: 0.8;">Role</div>
+              <div style="font-weight: 600;">${staffRole}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('verified-staff-id').value = staffId;
+    }    // Populate priority slots
+    function populatePrioritySlots(slots) {
+      const medicalZone = document.getElementById('medical-zone');
+      const dentalZone = document.getElementById('dental-zone');
+      const noSlotsDiv = document.getElementById('no-priority-slots');
+      
+      let hasSlots = false;
+
+      // Reset visibility
+      medicalZone.style.display = 'none';
+      dentalZone.style.display = 'none';
+      noSlotsDiv.style.display = 'none';
+
+      if (!slots) {
+        console.error('No slots data received');
+        noSlotsDiv.style.display = 'block';
+        return;
+      }
+
+      // Medical priority slots
+      if (slots.medical && Array.isArray(slots.medical) && slots.medical.length > 0) {
+        hasSlots = true;
+        medicalZone.style.display = 'block';
+        const medicalSlotsDiv = document.getElementById('medical-slots');
+        medicalSlotsDiv.innerHTML = slots.medical.map(slot => 
+          `<div class="slot-card available-slot" onclick="selectPrioritySlot('${slot.block}', '${slot.slot}', 'medical')" 
+                data-block="${slot.block}" data-slot="${slot.slot}">
+             <div class="slot-header">
+               <span class="slot-number">${slot.slot}</span>
+               <span class="slot-status">Available</span>
+             </div>
+             <div class="slot-info">Block ${slot.block.toUpperCase()}</div>
+           </div>`
+        ).join('');
+      }
+
+      // Dental priority slots
+      if (slots.dental && Array.isArray(slots.dental) && slots.dental.length > 0) {
+        hasSlots = true;
+        dentalZone.style.display = 'block';
+        const dentalSlotsDiv = document.getElementById('dental-slots');
+        dentalSlotsDiv.innerHTML = slots.dental.map(slot => 
+          `<div class="slot-card available-slot" onclick="selectPrioritySlot('${slot.block}', '${slot.slot}', 'dental')" 
+                data-block="${slot.block}" data-slot="${slot.slot}">
+             <div class="slot-header">
+               <span class="slot-number">${slot.slot}</span>
+               <span class="slot-status">Available</span>
+             </div>
+             <div class="slot-info">Block ${slot.block.toUpperCase()}</div>
+           </div>`
+        ).join('');
+      }
+
+      // Show "no slots" message if none available
+      if (!hasSlots) {
+        noSlotsDiv.style.display = 'block';
+      }
+    }
+
+    // Select priority slot
+    function selectPrioritySlot(block, slot, type) {
+      // Remove previous selection
+      document.querySelectorAll('.slot-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // Add selection to clicked slot
+      event.target.closest('.slot-card').classList.add('selected');
+      
+      selectedSlot = { block, slot, type };
+      document.getElementById('selected-block').value = block;
+      document.getElementById('selected-slot').value = slot;
+      
+      // Show phone input section
+      document.getElementById('phone-input-section').style.display = 'block';
+      
+      // Scroll to phone input
+      document.getElementById('phone-input-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Step 2: Priority Booking
+    document.getElementById('priority-booking-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      if (!selectedSlot) {
+        showError('Please select a parking slot');
+        return;
+      }
+      
+      const phoneNumber = document.getElementById('phone-number').value.trim();
+      const bookBtn = document.getElementById('book-btn');
+      const bookText = document.getElementById('book-text');
+      const bookLoading = document.getElementById('book-loading');
+      
+      if (!phoneNumber || phoneNumber.length !== 10) {
+        showError('Please enter a valid 10-digit phone number');
+        return;
+      }
+
+      // Show loading state
+      bookBtn.disabled = true;
+      bookText.style.display = 'none';
+      bookLoading.style.display = 'inline-block';
+
+      try {
+        const deviceInfo = await getDeviceFingerprint();
+        
+        const response = await fetch(`/hospital/priority_book/${selectedSlot.block}/${selectedSlot.slot}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            staff_id: staffInfo.staff_id,
+            phone_number: phoneNumber,
+            device_info: deviceInfo
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Update step indicator
+          updateStepIndicator(3);
+          
+          // Hide booking step and show confirmation
+          document.getElementById('booking-step').style.display = 'none';
+          document.getElementById('confirmation-step').style.display = 'block';
+          
+          // Show success message
+          showBookingSuccess(data);
+          
+        } else {
+          showError(data.message || 'Booking failed');
+        }
+      } catch (error) {
+        console.error('Booking error:', error);
+        showError('Network error. Please check your connection and try again.');
+      } finally {
+        // Reset button state
+        bookBtn.disabled = false;
+        bookText.style.display = 'inline';
+        bookLoading.style.display = 'none';
+      }
+    });
+
+    // Show booking success
+    function showBookingSuccess(data) {
+      const successDiv = document.getElementById('booking-success');
+      successDiv.innerHTML = `
+        <div style="text-align: center; background: linear-gradient(135deg, #10B981, #34D399); color: white; padding: 2rem; border-radius: 16px;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+          <h2 style="color: white; margin-bottom: 1rem;">Priority Booking Confirmed!</h2>
+          <p style="margin-bottom: 2rem; opacity: 0.9;">Your priority parking slot has been reserved</p>
+          
+          <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; text-align: center;">
+              <div>
+                <div style="font-size: 0.875rem; opacity: 0.8;">Block</div>
+                <div style="font-size: 1.5rem; font-weight: 600;">${selectedSlot.block.toUpperCase()}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.875rem; opacity: 0.8;">Slot</div>
+                <div style="font-size: 1.5rem; font-weight: 600;">${selectedSlot.slot}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.875rem; opacity: 0.8;">Priority</div>
+                <div style="font-size: 1.5rem; font-weight: 600;">${selectedSlot.type}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; margin: 1rem 0;">
+            <div style="font-size: 0.875rem; opacity: 0.8; margin-bottom: 0.5rem;">OTP sent to your phone</div>
+            <div style="font-size: 1.25rem; font-weight: 600; letter-spacing: 2px;">${data.otp || 'Check SMS'}</div>
+          </div>
+
+          <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="/release" class="btn" style="background: white; color: #10B981; text-decoration: none; border: none;">
+              Release Slot Later
+            </a>
+            <a href="/hospital" class="btn" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; border: 1px solid rgba(255,255,255,0.3);">
+              New Booking
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Utility functions
+    function updateStepIndicator(currentStep) {
+      for (let i = 1; i <= 3; i++) {
+        const step = document.getElementById(`step${i}`);
+        if (i <= currentStep) {
+          step.classList.add('active');
+        } else {
+          step.classList.remove('active');
+        }
+      }
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
+      errorText.textContent = message;
+      errorDiv.style.display = 'block';
+      errorDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closeError() {
+      document.getElementById('error-message').style.display = 'none';
+    }
+
+    // Auto-uppercase staff ID input
+    document.getElementById('staff-id').addEventListener('input', function(e) {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // Phone number validation
+    document.getElementById('phone-number').addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/\D/g, '');
+    });
+  </script>
+</body>
+</html>
