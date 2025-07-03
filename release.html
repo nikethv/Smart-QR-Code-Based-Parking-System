@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Parking Slot - Smart Parking System</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="main-container">
+        <!-- Back Link -->
+        <a href="/" class="back-link">
+            ← Back to Parking Blocks
+        </a>
+
+        <div class="card">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-logo">🚗</div>
+                <h1 class="page-title">Release Slot</h1>
+                <p class="page-subtitle">Free up your parking spot securely</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" id="step-1">1</div>
+                <div class="step" id="step-2">2</div>
+            </div>
+
+            <!-- Slot Information -->
+            <div class="form-section">
+                <h3>📍 Current Slot</h3>
+                <div class="info-message">
+                    <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">
+                        {{ block|title }} Block - Slot {{ slot }}
+                    </div>
+                    <div style="opacity: 0.9;">
+                        🔒 Currently Occupied
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phone Number Section -->
+            <div id="phone-section" class="form-section">
+                <h3>📱 Verification Required</h3>
+                <form id="phone-form">
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+91XXXXXXXXXX" required>
+                        <small style="color: var(--text-secondary); font-size: 0.9rem;">Enter the phone number used for booking</small>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="send-release-otp-btn">
+                        📨 Send Release OTP
+                    </button>
+                </form>
+                <div class="error-message" id="phone-error"></div>
+            </div>
+
+            <!-- OTP Verification Section -->
+            <div class="otp-section" id="otp-section">
+                <h3 style="text-align: center; color: var(--text-primary); margin-bottom: 1rem;">🔐 Enter Release Code</h3>
+                <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    We've sent a 6-digit release code to your phone
+                </p>
+                <div class="form-group">
+                    <input type="text" id="otp-input" class="otp-input" placeholder="000000" maxlength="6" required>
+                </div>
+                <button type="button" class="btn btn-accent" id="verify-release-otp-btn">
+                    🔓 Release Slot
+                </button>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="#" id="resend-release-otp" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">
+                        Didn't receive code? Resend OTP
+                    </a>
+                </div>
+                <div class="error-message" id="otp-error"></div>
+            </div>
+
+            <!-- Success Section -->
+            <div class="success-message" id="success-section">
+                <h2 style="margin-bottom: 1rem;">🎉 Slot Released Successfully!</h2>
+                <div id="release-details"></div>
+                <div style="margin-top: 1.5rem;">
+                    <a href="/" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">
+                        Back to Parking Blocks
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBlock = "{{ block }}";
+        let currentSlot = "{{ slot }}";
+
+        // Phone form submission
+        document.getElementById('phone-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const phoneNumber = document.getElementById('phone').value.trim();
+            if (!phoneNumber) {
+                showError('phone-error', 'Please enter your phone number');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                updateStep(1);
+                
+                const response = await fetch(`/enhanced_send_release_otp/${currentBlock}/${currentSlot}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: phoneNumber
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('phone-section').style.display = 'none';
+                    document.getElementById('otp-section').style.display = 'block';
+                    updateStep(2);
+                } else {
+                    showError('phone-error', data.message);
+                }
+            } catch (error) {
+                showError('phone-error', 'Failed to send OTP. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // OTP verification
+        document.getElementById('verify-release-otp-btn').addEventListener('click', async function() {
+            const otp = document.getElementById('otp-input').value.trim();
+            
+            if (!otp || otp.length !== 6) {
+                showError('otp-error', 'Please enter a valid 6-digit OTP');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                
+                const response = await fetch('/verify_release_otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        block: currentBlock,
+                        slot: currentSlot,
+                        otp: otp
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('otp-section').style.display = 'none';
+                    showSuccessMessage(data);
+                } else {
+                    showError('otp-error', data.message);
+                }
+            } catch (error) {
+                showError('otp-error', 'OTP verification failed. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('resend-release-otp').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('phone-form').dispatchEvent(new Event('submit'));
+        });
+
+        function showSuccessMessage(data) {
+            document.getElementById('release-details').innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; margin: 1rem 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Block:</span>
+                        <strong>${currentBlock.toUpperCase()}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Slot:</span>
+                        <strong>#${currentSlot}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Status:</span>
+                        <strong style="color: var(--success-color);">Released</strong>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); text-align: center; margin-top: 1rem;">
+                    Thank you for using Smart Parking System!
+                </p>
+            `;
+            document.getElementById('success-section').style.display = 'block';
+        }
+
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function setLoading(isLoading) {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = isLoading ? 'flex' : 'none';
+            
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.disabled = isLoading;
+            });
+        }
+
+        function updateStep(activeStep) {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < activeStep) {
+                    step.classList.add('completed');
+                } else if (index + 1 === activeStep) {
+                    step.classList.add('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+    button:hover {
+      background: #333333; /* Dark background on hover */
+      color: #FFD700; /* Golden yellow text on hover */
+      transform: scale(1.05);
+    }
+    #result {
+      margin-top: 1rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    #result.success {
+      color: #4CAF50; /* Green color for success */
+    }
+    #result.error {
+      color: #FF0000; /* Red color for error */
+    }
+  </style>
+</head>
+<body>
+  <h2>Release Slot</h2>
+  <p>Slot: {{ slot }}, Block: {{ block }}</p>
+
+  <form id="otpForm">
+    <label for="otp">Enter OTP:</label>
+    <input type="text" id="otp" placeholder="Enter OTP" required />
+    <button type="submit">Submit OTP</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const form = document.getElementById('otpForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otp = document.getElementById('otp').value;
+
+      const response = await fetch('/verify_release_otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: atob("{{ encoded_device }}"),
+          otp: otp
+        })
+      });
+
+      const result = await response.json();
+      const resultElement = document.getElementById('result');
+      resultElement.textContent = result.message;
+
+      if (result.success) {
+        resultElement.classList.add('success');
+        resultElement.classList.remove('error');
+      } else {
+        resultElement.classList.add('error');
+        resultElement.classList.remove('success');
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
