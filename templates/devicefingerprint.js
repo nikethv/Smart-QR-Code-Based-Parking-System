@@ -5,7 +5,7 @@
 
 class DeviceFingerprint {
     constructor() {
-        this.fingerprint = null;
+        this.fingerprint = null; 
         this.components = {};
     }
 
